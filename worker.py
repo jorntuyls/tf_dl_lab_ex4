@@ -303,13 +303,13 @@ class Worker:
         return self.read_last_line(filename).strip() == "next"
 
     def main(self, worker_nb=0):
-        ntrain = 50000          # the whole training set
-        nvalid = 10000          #
-        ntest = 10000           #
+        ntrain = 1000          # the whole training set
+        nvalid = 1000          #
+        ntest = 1000           #
         batch_size_valid = 500  # does not influence training process, but reduces time loss from validation
         batch_size_test = 500   # same here
         #num_epochs = 100000     # to disable this stopping criterion
-        time_limit = 60         # training time is limited to 60 seconds
+        time_limit = 100000         # training time is limited to 60 seconds
 
         algorithm_type = 2  # SGD with momentum
         irun = 1  # one run only
@@ -325,14 +325,16 @@ class Worker:
                 if not(self.next_criterium(filename)):
                     # Read the configuration line
                     line = self.read_first_line(filename)
-                    if line.strip() != '':
+                    if line.strip() == "wait":
+                        pass
+                    elif len(line.split()) == 5:
                         lst = line.split()
                         # Initialize values
                         nfilters = int(lst[0])
                         batch_size_train = int(lst[1])
                         M = float(lst[2])
                         LR = float(lst[3])
-                        num_epochs = int(lst[5])
+                        num_epochs = int(lst[4])
 
                         print("nfilters: {}\tbatch_size_train: {}\t M: {:.6f}\t LR: {:.6f}".format(nfilters, batch_size_train, M, LR))
 

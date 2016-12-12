@@ -1,6 +1,7 @@
 
 import numpy as np
 import time
+import math
 
 class Master:
 
@@ -18,6 +19,11 @@ class Master:
 
     def write_new_line(self,filename,strng):
         f = open(filename,'w')
+        f.write(strng)
+        f.close()
+
+    def append_new_line(self, filename, strng):
+        f = open(filename, 'a')
         f.write(strng)
         f.close()
 
@@ -41,31 +47,67 @@ class Master:
         print("start parallel loop with nepochs: {}".format(nepochs))
         stop_criterium = False
         val_loss_list = []
+        # Counter keeps track of where we are in the hyperparameters list
         counter = 0
+        counter_done = 0
         while(True):
             for filename in self.worker_file_list:
-                if counter < len(hyperparameters):
-                    if self.read_last_line(filename).strip() == "next":
-                        # append configuration (=firstline) to solution file
-                        line = self.read_first_line(filename)
-                        f = open("solutions_ms","a")
-                        f.write(line)
-                        f.close()
-                        # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
-                        val_loss_list.append(line[5])
-                        print(val_loss_list)
-
-                        next_params = hyperparameters[counter]
-                        nfilters = next_params[0]
-                        batch_size_train = next_params[1]
-                        M = next_params[2]
-                        LR = next_params[3]
-                        strng = "{}\t{}\t{}\t{}\t{}".format(nfilters,batch_size_train,M,LR,nepochs)
-                        self.write_new_line(filename,strng)
-
-                        counter += 1
-                else:
+                time.sleep(1)
+                lastline = self.read_last_line(filename).strip()
+                print("Counters: {},{}".format(counter, counter_done))
+                if counter_done == len(hyperparameters):
                     stop_criterium = True
+                    break
+                elif counter < len(hyperparameters) and lastline == "next":
+                    # append configuration (=firstline) to solution file
+                    line = self.read_first_line(filename)
+                    self.append_new_line("solutions_ms", line)
+
+                    # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
+                    val_loss_list.append(float(line.split()[5]))
+                    print(val_loss_list)
+
+                    # write new configuration to worker file
+                    next_params = hyperparameters[counter]
+                    nfilters = next_params[0]
+                    batch_size_train = next_params[1]
+                    M = next_params[2]
+                    LR = next_params[3]
+                    strng = "{}\t{}\t{}\t{}\t{}".format(nfilters,batch_size_train,M,LR,nepochs)
+                    self.write_new_line(filename,strng)
+
+                    counter += 1
+                    counter_done += 1
+                elif counter >= len(hyperparameters) and lastline == "next":
+                    # This worker is done and there are no new hyperparameter configurations
+                    #   Read firstline from worker and tell him to wait
+                    # append configuration (=firstline) to solution file
+                    line = self.read_first_line(filename)
+                    self.append_new_line("solutions_ms", line)
+
+                    # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
+                    val_loss_list.append(float(line.split()[5]))
+                    print(val_loss_list)
+
+                    # Tell worker to wait
+                    self.write_new_line(filename,"wait")
+
+                    counter_done += 1
+                elif counter >= len(hyperparameters) and lastline == "wait":
+                    # This worker is waiting for work but there is no work and
+                    #   other workers are still busy
+                    pass
+                elif counter < len(hyperparameters) and lastline == "wait":
+                    # This worker is free for work and there is work
+                    next_params = hyperparameters[counter]
+                    nfilters = next_params[0]
+                    batch_size_train = next_params[1]
+                    M = next_params[2]
+                    LR = next_params[3]
+                    strng = "{}\t{}\t{}\t{}\t{}".format(nfilters,batch_size_train,M,LR,nepochs)
+                    self.write_new_line(filename,strng)
+
+                    counter += 1
 
             if stop_criterium:
                 break
@@ -74,7 +116,7 @@ class Master:
 
 
     def hyperband(self):
-        max_iter = 81   # maximum iterations/epochs per configuration
+        max_iter = 3   # maximum iterations/epochs per configuration
         eta = 3         # defines downsampling rate (default=3)
         logeta = lambda x: math.log(x)/math.log(eta)
         s_max = int(logeta(max_iter))   # number of unique executions of Successive Halving (minus one)
@@ -84,7 +126,7 @@ class Master:
         # Begin Finite Horizon Hyperband outlerloop. Repeat indefinetely.
 
         nruns = 1       # set it to e.g. 10 when testing hyperband against randomsearch
-        for irun in range(0, 100):
+        for irun in range(0, 10):
             hband_results_filename = "stat_4/hyperband_{}.txt".format(irun)
             hband_file = open(hband_results_filename, 'w+', 0)
 
@@ -102,12 +144,13 @@ class Master:
                 r = max_iter*eta**(-s)      # initial number of iterations to run configurations for
 
                 # Begin Finite Horizon Successive Halving with (n,r)
-                T = [ get_random_hyperparameter_configuration() for i in range(n) ]
+                T = [ self.get_random_hyperparameter_configuration() for i in range(n) ]
                 for i in range(s+1):
+                    print("RUN: {}, {}, {}".format(irun, s, i))
                     # Run each of the n_i configs for r_i iterations and keep best n_i/eta
                     n_i = n*eta**(-i)
                     r_i = r*eta**(i)
-                    val_losses = self.run_then_return_val_loss_parallel(nepochs=r_i, hyperparameters=T)
+                    val_losses = self.run_then_return_val_loss_parallel(nepochs=int(r_i), hyperparameters=T)
 
                     nevals = nevals + len(T) * r_i / 81
                     argsortidx = np.argsort(val_losses)
@@ -123,20 +166,21 @@ class Master:
                         x_best_observed = T[argsortidx[0]]
 
                     for j in range(0, len(T)):
-                        stat_file.write("{:.15g}\t{:.15g}\n".format(T[j], val_losses[j]))
+                        stat_file.write("{}\t{}\t{:.15g}\t{:.15g}\t{:.15g}\n".format(
+                                            T[j][0], T[j][1],T[j][2],T[j][3],val_losses[j]))
                     T = [ T[i] for i in argsortidx[0:int( n_i/eta )] ]
 
                     # suppose the current best solution w.r.t. validation loss is our recommendation
                     # then let's evaluate it in noiseless settings (~= averaging over tons of runs)
                     if (len(T)):
-                        f_recommendation = run_then_return_val_loss(81, x_best_observed, 1e-10) # 81 epochs and 1e-10 ~= zero noise
-                    hband_file.write("{:.15g}\t{:.15g}\n".format(nevals, f_recommendation))
+                        f_recommendation = self.run_then_return_val_loss_parallel(81, [x_best_observed]) # 81 epochs and 1e-10 ~= zero noise
+                    hband_file.write("{:.15g}\t{:.15g}\n".format(nevals, f_recommendation[0]))
                 # End Finite Horizon Successive Halving with (n,r)
 
                 stat_file.close()
             hband_file.close()
 
-    def main(self, nb_workers=2, confs=400):
+    def main(self, nb_workers=2):
         start = time.time()
 
         f = open("solutions_ms","w")
@@ -145,7 +189,7 @@ class Master:
         for i in range(0,nb_workers):
             filename = "worker_{}".format(i)
             f = open(filename,'w')
-            f.write("next")
+            f.write("wait")
             f.close()
             self.worker_file_list.append(filename)
 
