@@ -304,18 +304,17 @@ class Worker:
 
     def main(self, worker_nb=0):
         ntrain = 50000          # the whole training set
-        nvalid = 10000          #
+        nvalid = 10000         #
         ntest = 10000           #
         batch_size_valid = 500  # does not influence training process, but reduces time loss from validation
         batch_size_test = 500   # same here
         #num_epochs = 100000     # to disable this stopping criterion
-        time_limit = 100000         # training time is limited to 60 seconds
+        #time_limit = 100000         # training time is limited to 60 seconds
 
         algorithm_type = 2  # SGD with momentum
         irun = 1  # one run only
         mexevaluations = 200
         nvariables = 4
-
         filename = "worker_{}".format(worker_nb)
         while(True):
             # Stopping criterium means that work is done
@@ -327,7 +326,7 @@ class Worker:
                     line = self.read_first_line(filename)
                     if line.strip() == "wait":
                         pass
-                    elif len(line.split()) == 5:
+                    elif len(line.split()) == 6:
                         lst = line.split()
                         # Initialize values
                         nfilters = int(lst[0])
@@ -335,6 +334,7 @@ class Worker:
                         M = float(lst[2])
                         LR = float(lst[3])
                         num_epochs = int(lst[4])
+                        time_limit = int(lst[5])
 
                         print("nfilters: {}\tbatch_size_train: {}\t M: {:.6f}\t LR: {:.6f}".format(nfilters, batch_size_train, M, LR))
 
@@ -348,8 +348,8 @@ class Worker:
                         # Check stopping criterium again
                         if not(self.stopping_criterium(filename)):
                             # Write configuration and result
-                            self.write_new_line(filename,"{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(nfilters,batch_size_train,
-                                    M,LR,num_epochs,val_loss,best_val_acc,total_time,nparameters))
+                            self.write_new_line(filename,"{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(nfilters,batch_size_train,
+                                    M,LR,num_epochs,time_limit,val_loss,best_val_acc,total_time,nparameters))
                             # Add "next" to last line so master knows it can give a new configuration
                             self.append_new_line(filename,"next")
                         else:

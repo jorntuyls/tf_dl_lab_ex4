@@ -43,8 +43,8 @@ class Master:
         f.close()
         return lastline
 
-    def run_then_return_val_loss_parallel(self, nepochs, hyperparameters):
-        print("start parallel loop with nepochs: {}".format(nepochs))
+    def run_then_return_val_loss_parallel(self, hyperparameters, time_limit=100000, nepochs=100000):
+        print("start parallel loop with nepochs: {}, time-limit: {}".format(nepochs, time_limit))
         stop_criterium = False
         val_loss_list = []
         # Counter keeps track of where we are in the hyperparameters list
@@ -64,7 +64,7 @@ class Master:
                     self.append_new_line("solutions_ms", line)
 
                     # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
-                    val_loss_list.append(float(line.split()[5]))
+                    val_loss_list.append(float(line.split()[6]))
                     print(val_loss_list)
 
                     # write new configuration to worker file
@@ -73,7 +73,7 @@ class Master:
                     batch_size_train = next_params[1]
                     M = next_params[2]
                     LR = next_params[3]
-                    strng = "{}\t{}\t{}\t{}\t{}".format(nfilters,batch_size_train,M,LR,nepochs)
+                    strng = "{}\t{}\t{}\t{}\t{}\t{}".format(nfilters,batch_size_train,M,LR,nepochs,time_limit)
                     self.write_new_line(filename,strng)
 
                     counter += 1
@@ -86,7 +86,7 @@ class Master:
                     self.append_new_line("solutions_ms", line)
 
                     # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
-                    val_loss_list.append(float(line.split()[5]))
+                    val_loss_list.append(float(line.split()[6]))
                     print(val_loss_list)
 
                     # Tell worker to wait
@@ -104,19 +104,19 @@ class Master:
                     batch_size_train = next_params[1]
                     M = next_params[2]
                     LR = next_params[3]
-                    strng = "{}\t{}\t{}\t{}\t{}".format(nfilters,batch_size_train,M,LR,nepochs)
+                    strng = "{}\t{}\t{}\t{}\t{}\t{}".format(nfilters,batch_size_train,M,LR,nepochs,time_limit)
                     self.write_new_line(filename,strng)
 
                     counter += 1
 
             if stop_criterium:
                 break
-        print("End parallel loop with nepochs: {}".format(nepochs))
+        print("End parallel loop with nepochs: {}, time-limit: {}".format(nepochs, time_limit))
         return val_loss_list
 
 
     def hyperband(self):
-        max_iter = 81   # maximum iterations/epochs per configuration
+        max_iter = 3   # maximum iterations/epochs per configuration
         eta = 3         # defines downsampling rate (default=3)
         logeta = lambda x: math.log(x)/math.log(eta)
         s_max = int(logeta(max_iter))   # number of unique executions of Successive Halving (minus one)
@@ -137,7 +137,7 @@ class Master:
 
             for s in reversed(range(s_max+1)):
 
-                stat_filename = "stat_4/hband_benchmark_{}.txt".format(s)
+                stat_filename = "stat_4/hband_benchmark_{}_{}.txt".format(irun,s)
                 stat_file = open(stat_filename, 'w+', 0)
 
                 n = int(math.ceil(B/max_iter/(s+1)*eta**s)) # initial number of configurations
@@ -150,7 +150,7 @@ class Master:
                     # Run each of the n_i configs for r_i iterations and keep best n_i/eta
                     n_i = n*eta**(-i)
                     r_i = r*eta**(i)
-                    val_losses = self.run_then_return_val_loss_parallel(nepochs=int(r_i), hyperparameters=T)
+                    val_losses = self.run_then_return_val_loss_parallel(hyperparameters=T, time_limit=int(r_i/max_iter*60), nepochs=100000)
 
                     nevals = nevals + len(T) * r_i / 81
                     argsortidx = np.argsort(val_losses)
@@ -166,15 +166,17 @@ class Master:
                         x_best_observed = T[argsortidx[0]]
 
                     for j in range(0, len(T)):
-                        stat_file.write("{}\t{}\t{:.15g}\t{:.15g}\t{:.15g}\n".format(
-                                            T[j][0], T[j][1],T[j][2],T[j][3],val_losses[j]))
+                        stat_file.write("{}\t{}\t{:.15g}\t{:.15g}\t{:.15g}\t{:.15g}\n".format(
+                                            T[j][0], T[j][1],T[j][2],T[j][3],r_i,val_losses[j]))
                     T = [ T[i] for i in argsortidx[0:int( n_i/eta )] ]
 
                     # suppose the current best solution w.r.t. validation loss is our recommendation
                     # then let's evaluate it in noiseless settings (~= averaging over tons of runs)
-                    if (len(T)):
-                        f_recommendation = self.run_then_return_val_loss_parallel(81, [x_best_observed]) # 81 epochs and 1e-10 ~= zero noise
-                    hband_file.write("{:.15g}\t{:.15g}\n".format(nevals, f_recommendation[0]))
+                    # if (len(T)):
+                    #    f_recommendation = self.run_then_return_val_loss_parallel(81, [x_best_observed]) # 81 epochs and 1e-10 ~= zero noise
+                hband_file.write("{}\t{}\t{:.15g}\t{:.15g}\t{:.15g}\t{:.15g}\n".format(
+                                    x_best_observed[0], x_best_observed[1], x_best_observed[2], x_best_observed[3],
+                                    x_best_observed_nep, y_best_observed))
                 # End Finite Horizon Successive Halving with (n,r)
 
                 stat_file.close()

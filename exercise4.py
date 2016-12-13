@@ -22,7 +22,7 @@ def run_then_return_val_loss(nepochs, hyperparameters, noiselevel):
 
     return yvalue
 
-iscenario = 1
+iscenario = 2
 
 if (iscenario == 1):
     stat_filename = "stat/fprofile.txt"              # output filename
@@ -78,7 +78,7 @@ if (iscenario == 2):
 
         for s in reversed(range(s_max+1)):
 
-            stat_filename = "stat/hband_benchmark_{}.txt".format(s)
+            stat_filename = "stat/hband_benchmark_{}.txt".format(iruns)
             stat_file = open(stat_filename, 'w+', 0)
 
             n = int(math.ceil(B/max_iter/(s+1)*eta**s)) # initial number of configurations
