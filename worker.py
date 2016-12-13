@@ -303,9 +303,9 @@ class Worker:
         return self.read_last_line(filename).strip() == "next"
 
     def main(self, worker_nb=0):
-        ntrain = 1000          # the whole training set
-        nvalid = 1000          #
-        ntest = 1000           #
+        ntrain = 50000          # the whole training set
+        nvalid = 10000          #
+        ntest = 10000           #
         batch_size_valid = 500  # does not influence training process, but reduces time loss from validation
         batch_size_test = 500   # same here
         #num_epochs = 100000     # to disable this stopping criterion
