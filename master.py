@@ -116,7 +116,7 @@ class Master:
 
 
     def hyperband(self):
-        max_iter = 3   # maximum iterations/epochs per configuration
+        max_iter = 81   # maximum iterations/epochs per configuration
         eta = 3         # defines downsampling rate (default=3)
         logeta = lambda x: math.log(x)/math.log(eta)
         s_max = int(logeta(max_iter))   # number of unique executions of Successive Halving (minus one)
@@ -205,4 +205,4 @@ class Master:
 
 if __name__ == '__main__':
     m = Master()
-    m.main()
+    m.main(3)
