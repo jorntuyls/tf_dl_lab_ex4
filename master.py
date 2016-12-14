@@ -115,14 +115,12 @@ class Master:
         return val_loss_list
 
 
-    def hyperband(self):
-        max_iter = 81   # maximum iterations/epochs per configuration
-        eta = 3         # defines downsampling rate (default=3)
+    def hyperband(self, max_iter=81, eta=3, resource="epochs"):
         logeta = lambda x: math.log(x)/math.log(eta)
         s_max = int(logeta(max_iter))   # number of unique executions of Successive Halving (minus one)
         B = (s_max+1)*max_iter          # total number of iterations (without reuse) per execution of Succesive Halving (n,r)
 
-        noiselevel = 0.2  # noise level of the objective function
+        #noiselevel = 0.2  # noise level of the objective function
         # Begin Finite Horizon Hyperband outlerloop. Repeat indefinetely.
 
         nruns = 1       # set it to e.g. 10 when testing hyperband against randomsearch
@@ -141,7 +139,9 @@ class Master:
                 stat_file = open(stat_filename, 'w+', 0)
 
                 n = int(math.ceil(B/max_iter/(s+1)*eta**s)) # initial number of configurations
+                print("n: {}".format(n))
                 r = max_iter*eta**(-s)      # initial number of iterations to run configurations for
+                print(r)
 
                 # Begin Finite Horizon Successive Halving with (n,r)
                 T = [ self.get_random_hyperparameter_configuration() for i in range(n) ]
@@ -150,9 +150,18 @@ class Master:
                     # Run each of the n_i configs for r_i iterations and keep best n_i/eta
                     n_i = n*eta**(-i)
                     r_i = r*eta**(i)
-                    val_losses = self.run_then_return_val_loss_parallel(hyperparameters=T, time_limit=int(r_i/max_iter*60), nepochs=100000)
+                    if resource == "epochs":
+                        nepochs = r_i
+                        time_limit = 100000
+                    elif resource == "time":
+                        nepochs = 100000
+                        time_limit = r_i
+                    else:
+                        raise ValueError("resource should be either 'epochs' or 'time'")
 
-                    nevals = nevals + len(T) * r_i / 81
+                    val_losses = self.run_then_return_val_loss_parallel(hyperparameters=T, time_limit=time_limit, nepochs=nepochs)
+
+                    nevals = nevals + len(T) * r_i / max_iter
                     argsortidx = np.argsort(val_losses)
 
                     if (x_best_observed == []):
@@ -174,8 +183,8 @@ class Master:
                     # then let's evaluate it in noiseless settings (~= averaging over tons of runs)
                     # if (len(T)):
                     #    f_recommendation = self.run_then_return_val_loss_parallel(81, [x_best_observed]) # 81 epochs and 1e-10 ~= zero noise
-                hband_file.write("{}\t{}\t{:.15g}\t{:.15g}\t{:.15g}\t{:.15g}\n".format(
-                                    x_best_observed[0], x_best_observed[1], x_best_observed[2], x_best_observed[3],
+                    hband_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                                    nevals,x_best_observed[0], x_best_observed[1], x_best_observed[2], x_best_observed[3],
                                     x_best_observed_nep, y_best_observed))
                 # End Finite Horizon Successive Halving with (n,r)
 
@@ -195,7 +204,7 @@ class Master:
             f.close()
             self.worker_file_list.append(filename)
 
-        self.hyperband()
+        self.hyperband(max_iter=20, eta=3, resource="time")
 
         stop = time.time()
         total = stop - start
@@ -205,4 +214,4 @@ class Master:
 
 if __name__ == '__main__':
     m = Master()
-    m.main(3)
+    m.main(2)

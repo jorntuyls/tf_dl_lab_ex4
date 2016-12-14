@@ -334,7 +334,7 @@ class Worker:
                         M = float(lst[2])
                         LR = float(lst[3])
                         num_epochs = int(lst[4])
-                        time_limit = int(lst[5])
+                        time_limit = float(lst[5])
 
                         print("nfilters: {}\tbatch_size_train: {}\t M: {:.6f}\t LR: {:.6f}".format(nfilters, batch_size_train, M, LR))
 
