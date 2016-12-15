@@ -31,7 +31,7 @@ class HyperbandMaster(Master):
                 elif counter < len(hyperparameters) and lastline == "next":
                     # append configuration (=firstline) to solution file
                     line = self.read_first_line(filename)
-                    self.append_new_line("solutions_ms", line)
+                    self.append_new_line(self.solution_file, line)
 
                     # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
                     val_loss_list.append(float(line.split()[6]))
@@ -53,7 +53,7 @@ class HyperbandMaster(Master):
                     #   Read firstline from worker and tell him to wait
                     # append configuration (=firstline) to solution file
                     line = self.read_first_line(filename)
-                    self.append_new_line("solutions_ms", line)
+                    self.append_new_line(self.solution_file, line)
 
                     # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
                     val_loss_list.append(float(line.split()[6]))
@@ -110,9 +110,7 @@ class HyperbandMaster(Master):
                 stat_file = open(stat_filename, 'w+', 0)
 
                 n = int(math.ceil(B/max_iter/(s+1)*eta**s)) # initial number of configurations
-                print("n: {}".format(n))
                 r = max_iter*eta**(-s)      # initial number of iterations to run configurations for
-                print(r)
 
                 # Begin Finite Horizon Successive Halving with (n,r)
                 T = [ self.get_random_hyperparameter_configuration() for i in range(n) ]
@@ -181,4 +179,4 @@ class HyperbandMaster(Master):
 
 if __name__ == '__main__':
     m = HyperbandMaster()
-    m.main(2)
+    m.main(0)

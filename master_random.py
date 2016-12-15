@@ -89,7 +89,7 @@ class RandomMaster(Master):
 
         for irun in range(8,10):
             start_time = time.time()
-            stat_file = open("stat_random/random_{}.txt".format(irun),'w+',0)
+            stat_file = open("stat_random/randomsearch_{}.txt".format(irun),'w+',0)
             x_best_observed = []
             y_best_observed = 0
 
