@@ -129,7 +129,7 @@ class Master:
         # Begin Finite Horizon Hyperband outlerloop. Repeat indefinetely.
 
         nruns = 1       # set it to e.g. 10 when testing hyperband against randomsearch
-        for irun in range(0, 10):
+        for irun in range(7, 10):
             hband_results_filename = "stat_4/hyperband_{}.txt".format(irun)
             hband_file = open(hband_results_filename, 'w+', 0)
 
