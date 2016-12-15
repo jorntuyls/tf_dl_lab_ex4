@@ -50,9 +50,9 @@ class Master:
         return lastline
 
     def run_then_return_val_loss(self, hyperparameters, time_limit=100000, nepochs=100000):
-        ntrain = 510          # the whole training set
-        nvalid = 510         #
-        ntest = 510           #
+        ntrain = 50000          # the whole training set
+        nvalid = 10000         #
+        ntest = 10000           #
         batch_size_valid = 500  # does not influence training process, but reduces time loss from validation
         batch_size_test = 500   # same here
 

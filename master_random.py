@@ -87,7 +87,7 @@ class RandomMaster(Master):
 
     def random_search(self, num_confs=100, time_limit=100000, nepochs=100000, parallel=True):
 
-        for irun in range(0,10):
+        for irun in range(8,10):
             start_time = time.time()
             stat_file = open("stat_random/random_{}.txt".format(irun),'w+',0)
             x_best_observed = []
@@ -123,4 +123,4 @@ class RandomMaster(Master):
 
 if __name__ == '__main__':
     m = RandomMaster()
-    m.main(1)
+    m.main(0)
