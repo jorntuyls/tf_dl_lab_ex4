@@ -18,14 +18,19 @@ if (iscenario == 3)
             if (ialgo == 2)    filename = ['hyperband_' num2str(irun-1) '.txt'];        end;
             M = dlmread(filename);
             xvals = M(:,1)
-            yvals = M(:,7)
+            if (ialgo == 1)    
+                yvals = M(:,7)
+            else
+                yvals = M(:,8)
+            end;
             ybest = yvals;  % already computed in our python code
             ybest_runs(irun,:) = ybest;
         end;
         ybest_median = mean(ybest_runs);
-        loglog(xvals, ybest_median, 'color', colors{ialgo}); hold on;
+        semilogx(xvals, ybest_median, 'color', colors{ialgo}); hold on;
     end;
-    ylim([0 0.1]);
+    ylim([0 1]);
+    xlim([0 20]);
     legend({'Random','Hyperband'});
     xlabel('number of function evaluations','fontsize',16);
     ylabel('best validation loss','fontsize',16); 

@@ -85,7 +85,7 @@ class HyperbandMaster(Master):
         return val_loss_list
 
 
-    def hyperband(self, max_iter=81, eta=3, resource="epochs", parallel=True):
+    def hyperband(self, max_iter=81, eta=3, unit=1, resource="epochs", parallel=True):
         logeta = lambda x: math.log(x)/math.log(eta)
         s_max = int(logeta(max_iter))   # number of unique executions of Successive Halving (minus one)
         B = (s_max+1)*max_iter          # total number of iterations (without reuse) per execution of Succesive Halving (n,r)
@@ -122,11 +122,11 @@ class HyperbandMaster(Master):
                     n_i = n*eta**(-i)
                     r_i = r*eta**(i)
                     if resource == "epochs":
-                        nepochs = r_i
+                        nepochs = r_i*unit
                         time_limit = 100000
                     elif resource == "time":
                         nepochs = 100000
-                        time_limit = r_i
+                        time_limit = r_i*unit
                     else:
                         raise ValueError("resource should be either 'epochs' or 'time'")
 
@@ -182,7 +182,7 @@ class HyperbandMaster(Master):
             f.close()
             self.worker_file_list.append(filename)
 
-        self.hyperband(max_iter=60, eta=3, resource="time", parallel=False)
+        self.hyperband(max_iter=60, eta=3, unit=6, resource="time", parallel=False)
 
 if __name__ == '__main__':
     m = HyperbandMaster()
