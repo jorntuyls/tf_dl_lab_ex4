@@ -10,7 +10,7 @@ class HyperbandMaster(Master):
 
     def __init__(self):
         self.worker_file_list = []
-        self.solution_file = "solution_ms_hyperband.txt"
+        self.solution_file = "stat_hyperband/solution_ms_hyperband.txt"
         self.worker = Worker()
 
     def run_then_return_val_loss_parallel(self, hyperparameters, time_limit=100000, nepochs=100000):
@@ -96,17 +96,19 @@ class HyperbandMaster(Master):
         nruns = 1       # set it to e.g. 10 when testing hyperband against randomsearch
         for irun in range(0, 10):
             start_time = time.time()
-            hband_results_filename = "stat_4/hyperband_{}.txt".format(irun)
+            hband_results_filename = "stat_hyperband/hyperband_{}.txt".format(irun)
             hband_file = open(hband_results_filename, 'w+', 0)
 
             x_best_observed = []
             x_best_observed_nep = 0
+            y_best_observed = 0
+            acc_best_observed = 0
 
             nevals = 0       # total number of full (with max_iter epochs) evaluations used so far
 
             for s in reversed(range(s_max+1)):
 
-                stat_filename = "stat_4/hband_benchmark_{}_{}.txt".format(irun,s)
+                stat_filename = "stat_hyperband/hband_benchmark_{}_{}.txt".format(irun,s)
                 stat_file = open(stat_filename, 'w+', 0)
 
                 n = int(math.ceil(B/max_iter/(s+1)*eta**s)) # initial number of configurations
@@ -129,9 +131,12 @@ class HyperbandMaster(Master):
                         raise ValueError("resource should be either 'epochs' or 'time'")
 
                     if parallel:
-                        val_losses = self.run_then_return_val_loss_parallel(hyperparameters=T, time_limit=time_limit, nepochs=nepochs)
+                        results = self.run_then_return_val_loss_parallel(hyperparameters=T, time_limit=time_limit, nepochs=nepochs)
                     else:
-                        val_losses = self.run_then_return_val_loss(hyperparameters=T, time_limit=time_limit, nepochs=nepochs)
+                        results = self.run_then_return_val_loss(hyperparameters=T, time_limit=time_limit, nepochs=nepochs)
+
+                    val_losses = results[0]
+                    val_accs = results[1]
 
                     nevals = nevals + len(T) * r_i / max_iter
                     argsortidx = np.argsort(val_losses)
@@ -139,11 +144,13 @@ class HyperbandMaster(Master):
                     if (x_best_observed == []):
                         x_best_observed = T[argsortidx[0]]
                         y_best_observed = val_losses[argsortidx[0]]
+                        acc_best_observed = val_accs[argsortidx[0]]
                         x_best_observed_nep = r_i
                     # only if better AND based on >= number of epochs, the latter is optional
                     if (val_losses[argsortidx[0]] < y_best_observed):# and (r_i >= x_best_observed_nep):
                         x_best_observed_nep = r_i
                         y_best_observed = val_losses[argsortidx[0]]
+                        acc_best_observed = val_accs[argsortidx[0]]
                         x_best_observed = T[argsortidx[0]]
 
                     for j in range(0, len(T)):
@@ -155,9 +162,9 @@ class HyperbandMaster(Master):
                     # then let's evaluate it in noiseless settings (~= averaging over tons of runs)
                     # if (len(T)):
                     #    f_recommendation = self.run_then_return_val_loss_parallel(81, [x_best_observed]) # 81 epochs and 1e-10 ~= zero noise
-                    hband_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
+                    hband_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(
                                     nevals, time.time()-start_time, x_best_observed[0], x_best_observed[1], x_best_observed[2],
-                                    x_best_observed[3], x_best_observed_nep, y_best_observed))
+                                    x_best_observed[3], x_best_observed_nep, y_best_observed, acc_best_observed))
                 # End Finite Horizon Successive Halving with (n,r)
 
                 stat_file.close()

@@ -213,10 +213,10 @@ class Worker:
         print("Number of parameters in model: {}".format(nparameters))
         print("Starting training...")
 
-        stat_file = open(stat_filename, 'w+', 0)
         start_time = time.time()
 
         best_val_acc = 0
+        best_val_loss = 0
 
         # We iterate over epochs:
         for epoch in range(num_epochs):
@@ -250,17 +250,12 @@ class Worker:
 
             if (val_acc / val_batches * 100 > best_val_acc):
                 best_val_acc = val_acc / val_batches * 100
-
-            stat_file.write("{}\t{:.15g}\t{:.15g}\t{:.15g}\t{:.15g}\n".format(
-                epoch, time.time() - start_time, train_err / train_batches,
-                val_err / val_batches, val_acc / val_batches * 100))
+                best_val_loss = val_err/val_batches
 
             if (time.time() - start_time > time_limit):
                 break
 
-        stat_file.close()
-
-        return [val_err/val_batches, best_val_acc, time.time()-start_time, nparameters]
+        return [best_val_loss, best_val_acc, time.time()-start_time, nparameters]
 
         # Optionally, you could now dump the network weights to a file like this:
         # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
