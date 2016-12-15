@@ -94,9 +94,9 @@ class HyperbandMaster(Master):
         # Begin Finite Horizon Hyperband outlerloop. Repeat indefinetely.
 
         nruns = 1       # set it to e.g. 10 when testing hyperband against randomsearch
-        for irun in range(0, 10):
+        for irun in range(8, 10):
             start_time = time.time()
-            hband_results_filename = "stat_4/hyperband_{}.txt".format(irun)
+            hband_results_filename = "stat_hyperband/hyperband_{}.txt".format(irun)
             hband_file = open(hband_results_filename, 'w+', 0)
 
             x_best_observed = []
@@ -106,7 +106,7 @@ class HyperbandMaster(Master):
 
             for s in reversed(range(s_max+1)):
 
-                stat_filename = "stat_4/hband_benchmark_{}_{}.txt".format(irun,s)
+                stat_filename = "stat_hyperband/hband_benchmark_{}_{}.txt".format(irun,s)
                 stat_file = open(stat_filename, 'w+', 0)
 
                 n = int(math.ceil(B/max_iter/(s+1)*eta**s)) # initial number of configurations
