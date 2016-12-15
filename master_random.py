@@ -3,49 +3,16 @@ import numpy as np
 import time
 import math
 
-class Master:
+from master import Master
+from worker import Worker
+
+class RandomMaster(Master):
 
     def __init__(self):
         self.worker_file_list = []
-
-    def get_random_hyperparameter_configuration(self):
-        x = np.random.uniform(0,1,4)
-        nfilters = 10 + int(90*x[0])                        #   in [10, 100]
-        batch_size_train = int(pow(2.0, 4.0 + 4.0*x[1]))    #   in [2^4, 2^8] = [16, 256]
-        M = float(x[2])                                     #   in [0, 1]
-        LR = float(pow(10.0, -2 + 1.5*x[3]))                #   in [10^-2, 10^-0.5] = [0.01, ~0.31]
-
-        return nfilters, batch_size_train, M, LR
-
-    def open_file(self,filename):
-        f = open(filename,'w')
-        f.close()
-
-    def write_new_line(self,filename,strng):
-        f = open(filename,'w')
-        f.write(strng)
-        f.close()
-
-    def append_new_line(self, filename, strng):
-        f = open(filename, 'a')
-        f.write(strng)
-        f.close()
-
-    def read_first_line(self,filename):
-        f = open(filename,'r')
-        line = f.readline()
-        f.close()
-        return line
-
-    def read_last_line(self,filename):
-        f = open(filename,'r')
-        lines = f.readlines()
-        if lines != []:
-            lastline = lines[-1]
-        else:
-            lastline = ""
-        f.close()
-        return lastline
+        self.solution_file = "stat_random/solution_ms_random"
+        self.open_file(self.solution_file)
+        self.worker = Worker()
 
     def run_then_return_val_loss_parallel(self, hyperparameters, time_limit=100000, nepochs=100000):
         print("start parallel loop with nepochs: {}, time-limit: {}".format(nepochs, time_limit))
@@ -65,7 +32,7 @@ class Master:
                 elif counter < len(hyperparameters) and lastline == "next":
                     # append configuration (=firstline) to solution file
                     line = self.read_first_line(filename)
-                    self.append_new_line("solutions_ms", line)
+                    self.append_new_line(self.solution_file, line)
 
                     # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
                     val_loss_list.append(float(line.split()[6]))
@@ -87,7 +54,7 @@ class Master:
                     #   Read firstline from worker and tell him to wait
                     # append configuration (=firstline) to solution file
                     line = self.read_first_line(filename)
-                    self.append_new_line("solutions_ms", line)
+                    self.append_new_line(self.solution_file, line)
 
                     # Structure of line is [nfilters, batch_size_train, M, LR, nepochs, val_loss, best_val_acc, running_time, nparameters]
                     val_loss_list.append(float(line.split()[6]))
@@ -118,31 +85,32 @@ class Master:
         print("End parallel loop with nepochs: {}, time-limit: {}".format(nepochs, time_limit))
         return val_loss_list
 
-    def random_search(self, num_confs=100, time_limit=100000, nepochs=100000,
-                    filename="random.txt", timing_filename="random_timing.txt"):
-        start_time = time.time()
+    def random_search(self, num_confs=100, time_limit=100000, nepochs=100000, parallel=True):
 
-        x_best_observed = []
-        y_best_observed = 0
+        for irun in range(0,10):
+            start_time = time.time()
+            stat_file = open("stat_random/random_{}.txt".format(irun),'w+',0)
+            x_best_observed = []
+            y_best_observed = 0
 
-        for i in range(0,num_confs):
-            conf = self.get_random_hyperparameter_configuration(1)
-            val_loss_list = self.run_then_return_val_loss_parallel([conf], time_limit=time_limit, nepochs=nepochs)
+            for i in range(0,num_confs):
+                conf = self.get_random_hyperparameter_configuration()
+                if parallel:
+                    val_loss_list = self.run_then_return_val_loss_parallel([conf], time_limit=time_limit, nepochs=nepochs)
+                else:
+                    val_loss_list = self.run_then_return_val_loss([conf], time_limit=time_limit, nepochs=nepochs)
 
-            if (x_best_observed == []) or (val_loss_list[0] < y_best_observed):
-                x_best_observed = conf
-                y_best_observed = val_loss_list[0]
+                if (x_best_observed == []) or (val_loss_list[0] < y_best_observed):
+                    x_best_observed = conf
+                    y_best_observed = val_loss_list[0]
 
-            strng = "{}\t{}\t{}\t{}\t{}\t{}\n".format(i, x_best_observed[0], x_best_observed[1], x_best_observed[2], x_best_observed[3], y_best_observed)
-            self.append_new_line(filename, strng)
+                stat_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(i+1, time.time() - start_time, x_best_observed[0],
+                            x_best_observed[1], x_best_observed[2], x_best_observed[3], y_best_observed))
 
-            total_time = time.time() - start_time
-            self.write_new_line(timing_filename, "Random search total time: {}".format(total_time))
+        stat_file.close()
 
 
     def main(self, nb_workers=2):
-
-        self.open_file("solutions_ms")
 
         for i in range(0,nb_workers):
             filename = "worker_{}".format(i)
@@ -151,8 +119,8 @@ class Master:
             f.close()
             self.worker_file_list.append(filename)
 
-        self.random_search(time_limit=60)
+        self.random_search(num_confs=15, time_limit=60, parallel=False)
 
 if __name__ == '__main__':
-    m = Master()
-    m.main(2)
+    m = RandomMaster()
+    m.main(1)
