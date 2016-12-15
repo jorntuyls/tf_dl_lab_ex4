@@ -70,5 +70,5 @@ class Master:
             LR = param[3]
             result = self.worker.get_result(ntrain, nvalid, ntest, algorithm_type, batch_size_train, batch_size_valid, batch_size_test, nepochs, "stat.txt", LR, M, nfilters, time_limit)
             val_loss_list.append(result[0])
-
+        
         return val_loss_list
