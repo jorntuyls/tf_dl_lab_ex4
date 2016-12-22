@@ -87,9 +87,9 @@ class RandomMaster(Master):
 
     def random_search(self, num_confs=100, time_limit=100000, nepochs=100000, parallel=True):
 
-        for irun in range(0,2):
+        for irun in range(0,10):
             start_time = time.time()
-            stat_file = open("stat_random/randomsearch_{}.txt".format(irun),'w+',0)
+            stat_file = open("stat_4/randomsearch_{}.txt".format(irun),'w+',0)
             x_best_observed = []
             y_best_observed = 0
             acc_best_observed = 0
@@ -117,7 +117,7 @@ class RandomMaster(Master):
         stat_file.close()
 
 
-    def main(self, nb_workers=2):
+    def main(self, nb_workers=2, parallel=False):
 
         for i in range(0,nb_workers):
             filename = "worker_{}".format(i)
@@ -126,8 +126,8 @@ class RandomMaster(Master):
             f.close()
             self.worker_file_list.append(filename)
 
-        self.random_search(num_confs=15, time_limit=60, parallel=False)
+        self.random_search(num_confs=15, time_limit=360, parallel=parallel)
 
 if __name__ == '__main__':
     m = RandomMaster()
-    m.main(0)
+    m.main(nb_workers=0)

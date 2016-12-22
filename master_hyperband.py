@@ -94,9 +94,9 @@ class HyperbandMaster(Master):
         # Begin Finite Horizon Hyperband outlerloop. Repeat indefinetely.
 
         nruns = 1       # set it to e.g. 10 when testing hyperband against randomsearch
-        for irun in range(8, 10):
+        for irun in range(0, 10):
             start_time = time.time()
-            hband_results_filename = "stat_hyperband/hyperband_{}.txt".format(irun)
+            hband_results_filename = "stat_4/hyperband_{}.txt".format(irun)
             hband_file = open(hband_results_filename, 'w+', 0)
 
             x_best_observed = []
@@ -108,7 +108,7 @@ class HyperbandMaster(Master):
 
             for s in reversed(range(s_max+1)):
 
-                stat_filename = "stat_hyperband/hband_benchmark_{}_{}.txt".format(irun,s)
+                stat_filename = "stat_4/hband_benchmark_{}_{}.txt".format(irun,s)
                 stat_file = open(stat_filename, 'w+', 0)
 
                 n = int(math.ceil(B/max_iter/(s+1)*eta**s)) # initial number of configurations
@@ -148,7 +148,7 @@ class HyperbandMaster(Master):
                         x_best_observed_nep = r_i
                     # only if better AND based on >= number of epochs, the latter is optional
                     if (val_losses[argsortidx[0]] < y_best_observed):# and (r_i >= x_best_observed_nep):
-                        x_best_observed_nep = r_i
+                        x_best_observed_nep = r_i*unit
                         y_best_observed = val_losses[argsortidx[0]]
                         acc_best_observed = val_accs[argsortidx[0]]
                         x_best_observed = T[argsortidx[0]]
@@ -170,7 +170,7 @@ class HyperbandMaster(Master):
                 stat_file.close()
             hband_file.close()
 
-    def main(self, nb_workers=2):
+    def main(self, nb_workers=2, parallel=False):
         start = time.time()
 
         self.open_file(self.solution_file)
@@ -182,8 +182,8 @@ class HyperbandMaster(Master):
             f.close()
             self.worker_file_list.append(filename)
 
-        self.hyperband(max_iter=60, eta=3, unit=6, resource="time", parallel=False)
+        self.hyperband(max_iter=60, eta=3, unit=6, resource="time", parallel=parallel)
 
 if __name__ == '__main__':
     m = HyperbandMaster()
-    m.main(0)
+    m.main(nb_workers=0)
