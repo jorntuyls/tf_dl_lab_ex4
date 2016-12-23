@@ -4,7 +4,7 @@ function unt()
 close all;
 set(gcf,'color','w');
 
-iscenario = 3;
+iscenario = 2;
 colors = {'red','blue','green','black','magenta','cyan', ...
     [0.4 0.7 0.1],[0.7 0.4 0.1],[0.1 0.4 0.7],[0.7, 0.7, 0]};
 
@@ -52,7 +52,7 @@ if (iscenario == 2)
     B = (s_max+1)*max_iter;
     
     handles = [];
-    for s=[s_max:-1:0]
+    for s=[s_max-4]
         delete(handles);
         handles = [];
         filename = ['stat/hband_benchmark_' num2str(s) '.txt'];
